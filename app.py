@@ -110,7 +110,7 @@ init_script = "\n".join(init_lines)
 # esconde sempre o painel de edição de dentro do HTML (a edição agora é só pelo formulário acima, no modo admin)
 html_final = html_content.replace(
     "</body>",
-    f"<style>.input-section{{display:none!important;}}</style><script>{init_script}</script></body>",
+    f"<style>.input-section{{display:none!important;}} #totais-section{{display:none!important;}}</style><script>{init_script}</script></body>",
 )
 
 components.html(html_final, height=1500, scrolling=True)
