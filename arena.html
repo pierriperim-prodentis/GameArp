@@ -243,8 +243,8 @@ function atualizar(){
     var vFabrica = getVal('vf_'+p.id);
     var v = vLoja+vFabrica;
     var pct = Math.min(100, Math.round(v/meta*100));
-    var restantes = Math.max(0, p.dias - dias);
-    return {id:p.id, name:p.name, role:p.role, meta:meta, color:p.color, ini:p.ini, vendido:v, pct:pct, diasTotal:p.dias, diasRestantes:restantes};
+    var passados = Math.min(dias, p.dias);
+    return {id:p.id, name:p.name, role:p.role, meta:meta, color:p.color, ini:p.ini, vendido:v, pct:pct, diasTotal:p.dias, diasPassados:passados};
   });
   data.sort(function(a,b){ return b.vendido - a.vendido; });
 
@@ -268,7 +268,7 @@ function atualizar(){
       +'<div class="podium-medal">'+medalhas[i]+'</div>'
       +'<div class="podium-av" style="background:'+p.color+'22;border-color:'+p.color+'66;color:'+p.color+'">'+p.ini+'</div>'
       +'<div class="podium-name">'+p.name+'</div>'
-      +'<div class="podium-role">'+p.role+' · '+p.diasRestantes+'/'+p.diasTotal+' dias restantes</div>'
+      +'<div class="podium-role">'+p.role+' · '+p.diasPassados+'/'+p.diasTotal+' dias</div>'
       +'<div class="podium-bar"><div class="podium-bar-fill" style="width:'+Math.min(100,p.pct)+'%;background:'+barC+'"></div></div>'
       +'<div class="podium-base" style="height:'+alturas[i]+'px">'+(i+1)+'º EM VENDAS</div>'
     +'</div>';
