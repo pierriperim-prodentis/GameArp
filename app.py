@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from pathlib import Path
 import json
+import requests
 
 st.set_page_config(
     page_title="Arena de Vendas - Lojas",
@@ -21,8 +22,13 @@ st.markdown(
 )
 
 # ---------- CONFIG ----------
-DATA_FILE = Path(__file__).parent / "dados_placar.json"
 SENHA_ADMIN = "prodentis2026"  # troque essa senha se quiser (e o link que você usa)
+
+JSONBIN_ID = st.secrets.get("JSONBIN_ID", "")
+JSONBIN_KEY = st.secrets.get("JSONBIN_KEY", "")
+JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_ID}"
+
+DATA_FILE = Path(__file__).parent / "dados_placar.json"  # usado só como reserva local, se o jsonbin falhar
 
 STORES = [
     {"id": "pmw", "nome": "🏬 PALMAS · PMW"},
@@ -39,6 +45,19 @@ DEFAULTS = {
 
 
 def carregar_dados():
+    # tenta buscar do jsonbin (armazenamento permanente na nuvem)
+    if JSONBIN_ID and JSONBIN_KEY:
+        try:
+            r = requests.get(
+                f"{JSONBIN_URL}/latest",
+                headers={"X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false"},
+                timeout=8,
+            )
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            pass
+    # reserva: arquivo local (pode ser apagado quando o app dorme)
     if DATA_FILE.exists():
         try:
             return json.loads(DATA_FILE.read_text(encoding="utf-8"))
@@ -48,7 +67,24 @@ def carregar_dados():
 
 
 def salvar_dados(d):
-    DATA_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    ok = False
+    if JSONBIN_ID and JSONBIN_KEY:
+        try:
+            r = requests.put(
+                JSONBIN_URL,
+                headers={"X-Master-Key": JSONBIN_KEY, "Content-Type": "application/json"},
+                data=json.dumps(d),
+                timeout=8,
+            )
+            ok = r.status_code == 200
+        except Exception:
+            ok = False
+    # sempre salva local também, como reserva
+    try:
+        DATA_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+    return ok
 
 
 def fmt_valor(v):
@@ -64,6 +100,9 @@ is_admin = st.query_params.get("chave") == SENHA_ADMIN
 if is_admin:
     st.title("🔐 Painel Admin — Arena de Vendas")
     st.caption("Só quem tem o link com a chave vê esta parte. Os vendedores acessam a URL normal e veem só o resultado abaixo.")
+
+    if not (JSONBIN_ID and JSONBIN_KEY):
+        st.warning("⚠️ Armazenamento permanente não configurado (faltam as Secrets JSONBIN_ID/JSONBIN_KEY). Os dados podem se perder quando o app dormir.")
 
     with st.form("form_placar"):
         dias = st.number_input(
@@ -84,9 +123,12 @@ if is_admin:
 
         enviado = st.form_submit_button("💾 Salvar e Publicar")
         if enviado:
-            salvar_dados(novos)
+            ok = salvar_dados(novos)
             dados = novos
-            st.success("Placar atualizado! Já está valendo para todo mundo.")
+            if ok:
+                st.success("Placar atualizado e salvo permanentemente na nuvem!")
+            else:
+                st.warning("Salvo localmente, mas não confirmou o envio pra nuvem. Confira as Secrets do app.")
 
     st.divider()
     st.caption("Pré-visualização — é isso que os vendedores veem:")
